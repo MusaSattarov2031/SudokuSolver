@@ -1,52 +1,39 @@
-import cv2
 import numpy as np
-
-def preprocess_image(image_path):
-    # Read the image in grayscale mode
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+#sudokuReader.py file will return an array with zeroes as empty numbers and other numbers. 
+#Then solve function will solve sudoku and return a new array as result
+def isValid(sudoku, row, col, num):
+    if num in sudoku[row]:
+        return False
     
-    # Apply adaptive thresholding for better grid detection
-    thresh = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                   cv2.THRESH_BINARY_INV, 11, 2)
+    if num in sudoku[:, col]:
+        return False
     
-    return thresh
-
-def detect_grid_and_cells(thresh_image):
-    # Detect contours to find the largest square, assumed to be the Sudoku grid
-    contours, _ = cv2.findContours(thresh_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    start_row, start_col=3*(row//3), 3*(col//3)
+    if num in sudoku[start_row:start_row+3, start_col:start_col+3]:
+        return False
     
-    if not contours:
-        print("No contours detected. Please check the preprocessing step.")
-        return None
+    return True
 
-    # Find the contour with the maximum area, which is the Sudoku grid
-    sudoku_grid = max(contours, key=cv2.contourArea)
+def solve(sudoku):
+    empty_cell=np.argwhere(sudoku==0)
+    #Initilizing empty cells
 
-    # Get the bounding box for the Sudoku grid
-    rect = cv2.boundingRect(sudoku_grid)
-    x, y, w, h = rect
-    
-    # Draw the bounding box (optional, for visualization purposes)
-    image_with_grid = cv2.drawContours(thresh_image.copy(), [sudoku_grid], -1, (0, 255, 0), 2)
+    if empty_cell.size==0:
+        return sudoku
+    # No empty cells, puzzle solved
 
-    # Warp perspective to get a straight 9x9 grid (you can implement this part later)
-    # Note: You can also apply cv2.findHomography() if needed to adjust the perspective.
-    
-    return image_with_grid, sudoku_grid  # Return grid contour and processed image
+    row, col=empty_cell[0]
+    #Initilizing first empty cell
 
-def solveSudoku(image_path):
-    thresh_image = preprocess_image(image_path)
-    result_image, sudoku_grid = detect_grid_and_cells(thresh_image)
+    for num in range (1, 10):
+        if isValid(sudoku, row, col, num):
+            sudoku[row, col]=num
+            #Trying to put some value to this cell
+            if solve(sudoku) is not None:
+                return solve(sudoku)
+            #Backtrack
 
-    if sudoku_grid is None:
-        print("Error: Sudoku grid not detected.")
-        return
+            sudoku[row, col]=0
 
-    # Here, you can proceed with further processing (cell extraction, OCR, etc.)
-
-    cv2.imwrite("detected_sudoku_grid.jpg", result_image)
-    print("Image saved as 'detected_sudoku_grid.jpg'")
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
+    return None
 
